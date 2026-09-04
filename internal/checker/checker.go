@@ -29,8 +29,8 @@ const systemPrompt = `你是内容审核引擎。判断给定文本是否命中�
 
 // Result 是审核结论。
 type Result struct {
-	Pass          bool     `json:"pass"`
-	Categories    []string `json:"categories"` // 命中的类别名，可多个；通过时为空
+	Pass         bool     `json:"pass"`
+	Categories   []string `json:"categories"` // 命中的类别名，可多个；通过时为空
 	RedactedText string   `json:"redacted_text"`
 }
 
@@ -64,10 +64,15 @@ type chatMessage struct {
 	Content string `json:"content"`
 }
 
+type responseFormat struct {
+	Type string `json:"type"`
+}
+
 type chatRequest struct {
-	Model     string        `json:"model"`
-	Temperature float64     `json:"temperature"`
-	Messages  []chatMessage `json:"messages"`
+	Model          string         `json:"model"`
+	Temperature    float64        `json:"temperature"`
+	Messages       []chatMessage  `json:"messages"`
+	ResponseFormat responseFormat `json:"response_format"`
 }
 
 type chatResponse struct {
@@ -90,8 +95,9 @@ func (c *Client) Check(ctx context.Context, text string) (*Result, error) {
 
 	var body bytes.Buffer
 	_ = json.NewEncoder(&body).Encode(chatRequest{
-		Model:       c.cfg.Model,
-		Temperature: 0,
+		Model:          c.cfg.Model,
+		Temperature:    0,
+		ResponseFormat: responseFormat{Type: "json_object"},
 		Messages: []chatMessage{
 			{Role: "system", Content: systemPrompt},
 			{Role: "user", Content: text},
