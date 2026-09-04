@@ -1,0 +1,4 @@
+/checkspam
+*.exe
+
+.reasonix/
