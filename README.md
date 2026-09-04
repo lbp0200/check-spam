@@ -38,13 +38,13 @@ curl -X POST https://liuboping.win:8443/spam/text/check \
 {
   "pass": false,
   "categories": ["广告"],
-  "redacted_text": "加*微*信* abc123 领*取*优*惠*券"
+  "redacted_text": "加微信 *** 领取优惠券"
 }
 ```
 
 - `pass`：是否通过（无命中类别即 true）
 - `categories`：命中的类别名数组，可多个；通过时为空
-- `redacted_text`：把命中词汇替换为等长 `*` 的文本；通过时为空字符串
+- `redacted_text`：把命中的敏感词整体替换为 `***` 的文本；通过时为空字符串
 
 错误码：`400` 请求体非法 JSON；`502` 模型调用/解析失败；`504` 模型超时。
 
@@ -60,4 +60,4 @@ curl https://liuboping.win:8443/spam/health
 ## 备注
 
 - 类别判定由大模型完成，偶有误判（如把"上门服务"外的普通文本误标），prompt 已按"宁可漏判不可误判"调优；如需更严格/更宽松可调整 `internal/checker/checker.go` 里的 `systemPrompt`。
-- 脱敏是模型逐词替换，个别字可能被多打或少打星号。
+- 脱敏是模型把命中的敏感词整体替换为 `***`，个别情况下可能多打或少打星号。
