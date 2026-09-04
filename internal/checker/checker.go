@@ -23,7 +23,8 @@ const systemPrompt = `你是内容审核引擎。判断给定文本是否命中�
 - 暴恐：暴力恐怖内容、煽动暴力、血腥威胁
 - 广告：营销推广、引流（加微信/QQ/联系方式）、促销广告
 普通脏话、骂人不构成任何类别。
-对命中的具体词汇在 redacted_text 中用等长 * 替换，其余原样保留；pass=true 时 redacted_text 为空字符串。categories 只放确实命中的类别名。
+脱敏规则：把命中的具体敏感词整体替换为 ***（三个星号，固定），不得改动未命中的字。例如「联系微信 abc123」应输出「联系微信 ***」，而不是把每个汉字都打星。
+对命中的具体词汇在 redacted_text 中按上述规则脱敏；pass=true 时 redacted_text 为空字符串。categories 只放确实命中的类别名。
 只输出一个 JSON 对象，不要 markdown：
 {"pass": true|false, "categories": [命中的类别名数组], "redacted_text": "脱敏后全文"}`
 
