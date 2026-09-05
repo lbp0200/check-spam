@@ -23,8 +23,8 @@ const systemPrompt = `你是内容审核引擎。判断给定文本是否命中�
 - 暴恐：暴力恐怖内容、煽动暴力、血腥威胁
 - 广告：营销推广、引流（加微信/QQ/联系方式）、促销广告
 普通脏话、骂人不构成任何类别。
-脱敏规则：把命中的具体敏感词整体替换为 ***（三个星号，固定），不得改动未命中的字。例如「联系微信 abc123」应输出「联系微信 ***」，而不是把每个汉字都打星。
-对命中的具体词汇在 redacted_text 中按上述规则脱敏；pass=true 时 redacted_text 为空字符串。categories 只放确实命中的类别名。
+脱敏规则：把命中的具体敏感词整体替换为 ***（三个星号，固定），不得改动未命中的字。例如「联系微信 abc123」应输出「联系微信 ***」，而不是把每个汉字都打星；若文本整体即风险而无明显专有名词（如煽动、威胁句），把承载风险的短语整体打星。
+对命中的具体词汇在 redacted_text 中按上述规则脱敏；pass=false 时 redacted_text 必须与原文不同、不得原样返回；pass=true 时 redacted_text 返回原文（无脱敏）。categories 只放确实命中的类别名。
 只输出一个 JSON 对象，不要 markdown：
 {"pass": true|false, "categories": [命中的类别名数组], "redacted_text": "脱敏后全文"}`
 
@@ -91,7 +91,7 @@ type chatResponse struct {
 // Check 审核一段文本。
 func (c *Client) Check(ctx context.Context, text string) (*Result, error) {
 	if strings.TrimSpace(text) == "" {
-		return &Result{Pass: true, Categories: []string{}}, nil
+		return &Result{Pass: true, Categories: []string{}, RedactedText: text}, nil
 	}
 
 	var body bytes.Buffer
@@ -140,15 +140,15 @@ func (c *Client) Check(ctx context.Context, text string) (*Result, error) {
 	}
 
 	raw := strings.TrimSpace(cr.Choices[0].Message.Content)
-	res, err := parseResult(raw)
+	res, err := parseResult(raw, text)
 	if err != nil {
 		return nil, fmt.Errorf("模型输出不是合法审核结果: %w (原始: %s)", err, truncate(raw, 200))
 	}
 	return res, nil
 }
 
-// parseResult 解析并规范化模型输出的 JSON。
-func parseResult(raw string) (*Result, error) {
+// parseResult 解析并规范化模型输出的 JSON。text 为原始输入，用于通过时回填原文。
+func parseResult(raw, text string) (*Result, error) {
 	raw = stripCodeFence(raw)
 	var r Result
 	if err := json.Unmarshal([]byte(raw), &r); err != nil {
@@ -178,6 +178,10 @@ func parseResult(raw string) (*Result, error) {
 	r.Categories = cats
 	// 有命中类别则必然不通过，保持一致。
 	r.Pass = len(r.Categories) == 0
+	// 通过时返回原文（无脱敏），兜底模型偶尔漏填/乱填 redacted_text。
+	if r.Pass {
+		r.RedactedText = text
+	}
 	return &r, nil
 }
 
